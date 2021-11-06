@@ -76,7 +76,12 @@ def encrypt(input_bytes, key):
         List of int
 
     """
-
+    print("Текст в двоичном виде:\n", get_bytes(input_bytes))
+    print("Текст в шестнадцатеричном виде:\n", get_hex(input_bytes))
+    bsn()
+    print("Ключ в двоичном виде:\n", get_bytes(key))
+    print("Ключ в шестнадцатеричном виде:\n", get_hex(key))
+    bsn()
     # let's prepare our enter data: State array and KeySchedule
     state = [[] for j in range(4)]
     for r in range(4):
@@ -255,12 +260,18 @@ def key_expansion(key):
         for c in range(nk):
             key_schedule[r].append(key_symbols[r + 4 * c])
 
+    print("Шестнадцатеричный ключ в матрице:\n", get_hex_matrix(key_schedule))
+    print("Далее составление раундовых ключей. В одном раундовом ключе четыре колонки. По заданию интересуют колонки 5-6-7-8.")
     # Comtinue to fill KeySchedule
     for col in range(nk, nb * (nr + 1)):  # col - column number
+        bsn()
+        print("Заполняемая колонка: ", col+1)
+
         if col % nk == 0:
             # take shifted (col - 1)th column...
             tmp = [key_schedule[row][col - 1] for row in range(1, 4)]
             tmp.append(key_schedule[0][col - 1])
+            print("\nЦиклический сдвиг последней колонки на 1:\n", get_hex(tmp))
 
             # change its elements using Sbox-table like in SubBytes...
             for j in range(len(tmp)):
@@ -268,18 +279,28 @@ def key_expansion(key):
                 sbox_col = tmp[j] % 0x10
                 sbox_elem = sbox[16 * sbox_row + sbox_col]
                 tmp[j] = sbox_elem
-
+            print("\nЗамена по Sbox:\n", get_hex(tmp))
             # and finally make XOR of 3 columns
+            first_xor = []
             for row in range(4):
+                first_xor.append((key_schedule[row][col - 4]) ^ (tmp[row]))
                 s = (key_schedule[row][col - 4]) ^ (tmp[row]) ^ (rcon[row][int(col / nk - 1)])
                 key_schedule[row].append(s)
+            print("\nXOR с первым столбцом ключа:\n", get_hex([l[col-4] for l in key_schedule]))
+            print("XOR\n", get_hex(tmp))
+            print("==\n", get_hex(first_xor))
 
+            print("\nXOR с RCON:\n", get_hex(first_xor))
+            print("XOR\n", get_hex([l[int(col / nk - 1)] for l in rcon]))
+            print("==\n", get_hex([l[col] for l in key_schedule]))
         else:
             # just make XOR of 2 columns
             for row in range(4):
                 s = key_schedule[row][col - 4] ^ key_schedule[row][col - 1]
                 key_schedule[row].append(s)
-
+            print("\nСтолбец - результат следующей операции:\n", get_hex([l[col-4] for l in key_schedule]))
+            print("XOR\n", get_hex([l[col-1] for l in key_schedule]))
+            print("==\n", get_hex([l[col] for l in key_schedule]))
     return key_schedule
 
 
@@ -370,3 +391,35 @@ def mul_by_0e(num):
     return mul_by_02(mul_by_02(mul_by_02(num))) ^ mul_by_02(mul_by_02(num)) ^ mul_by_02(num)
 
 # End of small helpful functions block
+
+
+def get_bytes(byte_str):
+    return " ".join(add_zeroes("{0:b}".format(apply_ord(n))) for n in byte_str)
+
+
+def get_hex(hex_str):
+    return " ".join(hex(apply_ord(n)) for n in hex_str)
+
+
+def add_zeroes(byte_str):
+    return (8-len(byte_str))*"0" + byte_str
+
+
+def apply_ord(symbol):
+    if isinstance(symbol, str):
+        return ord(symbol)
+    return symbol
+
+
+def get_hex_matrix(m):
+    parts = []
+    for i in range(len(m)):
+        part = []
+        for j in range(len(m[i])):
+            part.append(hex(m[i][j]))
+        parts.append(" ".join(part))
+    return "\n".join(parts)
+
+
+def bsn():
+    print("\n\n")
